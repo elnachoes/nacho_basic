@@ -1,0 +1,35 @@
+[
+    {
+        "succeding_token_list": [
+            {
+                "Identity": ""
+            },
+            {
+                "IntLiteral": 0
+            }
+        ],
+        "token": "Assignment"
+    },
+    {
+        "succeding_token_list": [
+            "Assignment"
+        ],
+        "token": {
+            "Identity": ""
+        }
+    },
+    {
+        "succeding_token_list": [],
+        "token": {
+            "IntLiteral": 0
+        }
+    },
+    {
+        "succeding_token_list": [
+            {
+                "Identity": ""
+            }
+        ],
+        "token": "IntDeclaration"
+    }
+]
