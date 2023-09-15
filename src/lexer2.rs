@@ -1,9 +1,4 @@
-use std::collections::HashMap;
-
-trait TokenLiteralMap<T> {
-    fn get_token_literal_map() -> HashMap<T, String>;
-}
-
+#[derive(Hash, PartialEq, Eq)]
 enum Token {
     // variable identity
     Identity(String),
@@ -16,10 +11,21 @@ enum Token {
     // operators
     Operator(Operator),
 
-    // Declarations
+    // Type literal tokens for type annotations
     Type(Type),
 
-    KeyWord(Keyword)
+    // Keywords
+    KeyWord(Keyword),
+
+    // KeyLimiters
+    KeyLimiter(KeyLimiter),
+
+    // Unexpected Token
+    Error,
+}
+
+trait TokenLiteralMap<T> {
+    fn get_token_literal_map(string : &str) -> T;
 }
 
 #[derive(Hash, PartialEq, Eq)]
@@ -31,17 +37,40 @@ enum Keyword {
     For,
     Function,
 }
-
 impl TokenLiteralMap<Keyword> for Keyword {
-    fn get_token_literal_map() -> HashMap<Keyword, String> {
-        HashMap::from([
-            (Keyword::If, String::from("if")),
-            (Keyword::Elif, String::from("elif")),
-            (Keyword::Else, String::from("else")),
-            (Keyword::While, String::from("while")),
-            (Keyword::For, String::from("for")),
-            (Keyword::Function, String::from("fn")),
-        ])
+    fn get_token_literal_map(string : &str) -> Keyword {
+        match string {
+            "if" => Keyword::If,
+            "elif" => Keyword::Elif,
+            "else" => Keyword::Else,
+            "while" => Keyword::While,
+            "for" => Keyword::For,
+            "fn" => Keyword::Function,
+            _ => panic!("lexing error : unexpected keyword")
+        }
+    }
+}
+
+#[derive(Hash, PartialEq, Eq)]
+enum KeyLimiter {
+    Space,
+    Quote,
+    OpenParen,
+    CloseParen,
+    OpenBracket,
+    CloseBracket,
+}
+impl TokenLiteralMap<KeyLimiter> for KeyLimiter {
+    fn get_token_literal_map(string : &str) -> KeyLimiter {
+        match string {
+            " " => KeyLimiter::Space,
+            "\"" => KeyLimiter::Quote,
+            "(" => KeyLimiter::OpenParen,
+            ")" => KeyLimiter::CloseParen,
+            "{" => KeyLimiter::OpenBracket,
+            "}" => KeyLimiter::CloseBracket,
+            _ => panic!("lexing error : unexpected key limiter")
+        }
     }
 }
 
@@ -51,14 +80,14 @@ enum Type {
     Float,
     String,
 }
-
 impl TokenLiteralMap<Type> for Type {
-    fn get_token_literal_map() -> HashMap<Type, String> {
-        HashMap::from([
-            (Type::Int, String::from("int")),
-            (Type::Float, String::from("float")),
-            (Type::String, String::from("string")),
-        ])
+    fn get_token_literal_map(string : &str) -> Type {
+        match string {
+            "int" => Type::Int,
+            "float" => Type::Float,
+            "string" => Type::String,
+            _ => panic!("lexing error : unexpected type")
+        }
     }
 }
 
@@ -71,16 +100,20 @@ enum Operator {
     Mod,
     Assignment
 }
-
 impl TokenLiteralMap<Operator> for Operator {
-    fn get_token_literal_map() -> HashMap<Operator, String> {
-        HashMap::from([
-            (Operator::Add, String::from("+")),
-            (Operator::Subtract, String::from("-")),
-            (Operator::Multiply, String::from("*")),
-            (Operator::Divide, String::from("/")),
-            (Operator::Mod, String::from("%")),
-            (Operator::Assignment, String::from("=")),
-        ])
+    fn get_token_literal_map(string : &str) -> Operator {
+        match string {
+            "+" => Operator::Add,
+            "-" => Operator::Subtract,
+            "*" => Operator::Multiply,
+            "/" => Operator::Divide,
+            "%" => Operator::Mod,
+            "=" => Operator::Assignment,
+            _ => panic!("lexing error : unexpected operator")
+        }
     }
+}
+
+fn lex_file(file : &String) {
+    
 }
