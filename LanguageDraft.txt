@@ -1,0 +1,30 @@
+// comments with two fwslashes
+// no need for a main top level statements allowed
+// end of statements will be end of lines
+
+//function declaration with return type
+int asdf() {
+  return 1 
+}
+
+// int declaration and assigning it to the result of asdf
+int x = asdf()
+
+// string and float types and bool types
+string y = "asdf"
+float z = 2.f
+bool a = true
+
+// control examples
+if a {
+}
+elif z == 2.f and !a {
+}
+else {
+}
+while  {
+}
+for i in range(0..=10) {
+}
+
+//maybe a composite type that can get stored on the heap or the stack? undecided on if I want to go that far.

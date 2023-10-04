@@ -1,4 +1,1 @@
-asdf
-qwer
-zxcv zxcv zxcv
-asdf
+int x = 5

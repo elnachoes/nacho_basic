@@ -1,189 +1,191 @@
-use std::{collections::HashMap, io::{Read, Write}, default};
-use serde::{Deserialize, Serialize};
-use serde_json::{Result, json};
-use {std::fs};
+use std::{io::Read, vec};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Hash)]
+#[derive(Debug)]
 pub enum Token {
     Error,
-    None,
+
+    Identity(String, IdentityTokenType),
+
     IntLiteral(i32),
-    IntDeclaration,
-    Assignment,
-    Identity(String),
-    // SpaceSeperator
-}
+    FloatLiteral(f32),
+    StringLiteral(String),
+    BoolLiteral(bool),
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TokenLiteralMap {
-    map : HashMap<String, Token> 
-}
+    SpaceSeperator,
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SuccedingTokenList {
-    pub token : Token,
-    pub succeding_token_list : Vec<Token>
+    OpenBlockLimiter,
+    CloseBlockLimiter,
+
+    OpenParameterLimiter,
+    CloseParameterLimiter,
+
+    Operator(OperatorTokenType),
+
+    EndOfStatement,
 }
 
 #[derive(Debug)]
-pub struct Lexer {
-    token_literal_map : TokenLiteralMap,
-    succeding_token_lists : Vec<SuccedingTokenList>,
-    read_index : usize,
-    statement : String,
-    current_token :Token,
+pub enum IdentityTokenType {
+    Variable,
+    Type(Type),
+    Function,
 }
 
-impl Lexer {
-    pub fn new() -> Self {
-        Self {
-            token_literal_map : Self::load_token_map().expect("could not load tokenmap"),
-            succeding_token_lists : Self::load_succeding_token_lists().expect("could not load succeding tokens list"),
-            statement : Default::default(),
-            read_index : 0,
-            current_token : Token::None,
+#[derive(Debug)]
+pub enum OperatorTokenType {
+    Assignment,
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    Modulation,
+}
+
+#[derive(Debug)]
+pub enum Type {
+    Int,
+    Float,
+    String,
+    Bool,
+}
+
+enum LexerState {
+    Start,
+    MultiChar,
+    SingleChar,
+    Error,
+    // AlphaNumericToken,
+    // NumericToken,
+}
+impl LexerState {
+    pub fn step_state(&mut self, token : &Token) {
+        *self = match token {
+            Token::Error => Self::Error,
+            Token::Identity(_,_) |
+            Token::IntLiteral(_) |
+            Token::FloatLiteral(_) |
+            Token::StringLiteral(_) | 
+            Token::BoolLiteral(_) => Self::SingleChar,
+            _ => Self::MultiChar
         }
-    }
-
-    // this will load the token map for the lexer to parse tokens with
-    // for now this is hard coded to TokenMap.json so I can easily add/delete/modify token identifiers like 'int', 'float', 'string', etc
-    fn load_token_map() -> Result<TokenLiteralMap> {
-        let mut file_to_read =  fs::File::options().read(true).open("TokenMap.json").expect("tokenmap not found");
-        let mut json_buffer : String = Default::default();
-        file_to_read.read_to_string(&mut json_buffer).expect("couldn't read file");
-        Ok(serde_json::from_str(&json_buffer.as_str()).expect("couldn't deserialize"))
-    }
-
-    fn load_succeding_token_lists() -> Result<Vec<SuccedingTokenList>> {
-        let mut file_to_read = fs::File::options().read(true).open("SuccedingTokensLists.json").expect("succeeding tokens list not found");
-        let mut json_buffer : String = Default::default();
-        file_to_read.read_to_string(&mut json_buffer).expect("couldn't read file");
-        Ok(serde_json::from_str(&json_buffer.as_str()).expect("couldn't deserialize"))
-    }
-
-    // fn read_first_token(&mut self) -> Token {
-    //     let starting_index = self.read_index;
-        
-    //     // keep reading alphanumeric charaters until one is not found
-    //     for i in self.statement[starting_index..].chars() {
-    //         if i.is_alphanumeric() { self.read_index += 1; } 
-    //         else { break; }
-    //     }
-
-    //     let token = self.statement[starting_index..self.read_index].to_string();
-
-    //     // try doing it more functionally
-    //     // if the token matches a token key in the token map like 'int' -> Token::, clone it and return it.
-    //     match self.token_literal_map.map.iter().filter(|(key, _val)| token.eq(*key)).next() {
-    //         Some((_key, val)) => val.clone(),
-    //         _ => Token::Identity(token)
-    //     }
-    // }
-
-
-    fn read_token(&mut self) -> Token {
-        let starting_index = self.read_index;
-
-        // first check if the token exists in the token literal list. if so return that token. 
-        // this will cover language keywords like 'int' '=' 
-        for (token_string, token) in self.token_literal_map.map.iter() {
-
-            // println!("{:?}", (starting_index + token_string.len() < self.statement.len()));
-            // println!("{:?}",(&self.statement[starting_index..token_string.len()]));
-            println!("{:?}",(&token_string));
-
-            if starting_index + token_string.len() < self.statement.len() &&
-                &self.statement[starting_index..token_string.len()] == token_string.as_str() {
-                
-                // move the read index the difference past the token string
-                self.read_index = starting_index + (starting_index - token_string.len());
-                return token.clone();                
-            }
-        }
-        
-        // check for an int literal
-        // if self.statement.as_bytes()[starting_index].is_ascii_digit() {
-            
-        //     let end_of_int_literal_index = self.statement
-        //         .as_bytes()[starting_index..self.statement.len()]
-        //         .iter()
-        //         .enumerate()
-        //         .find(|(index, char)| {!char.is_ascii_digit()});
-
-        //     if let Some((usize, &u8)) = end_of_int_literal_index {
-                
-        //         return
-        //     } else {
-
-        //     }
-        // }
-
-
-        // todo : you would check a string literal like "string"
-
-
-        // check for an id
-        
-        Token::None
-    }
-
-
-    pub fn lex_statement(&mut self, statement : String) {
-        // step 1 strip out whitespace
-        self.read_index = 0;
-        self.statement = statement.replace(" ", "").to_string();
-        
-
-        let x = self.read_token();
-        println!("{:?}", x)
-
-        // step 2 read in a declaration or 
-        // let x = self.read_first_token();
-
-
-        // step 2 check if we are reading a single character token
-        // setp 3 if we were reading a single character token
     }
 }
 
-
-
-pub fn test_load_succeding_tokens_lists() {
-    let succeding_tokens_lists = json!([
-        SuccedingTokenList {
-            token : Token::Assignment,
-            succeding_token_list : vec![
-                Token::Identity(Default::default()),
-                Token::IntLiteral(Default::default())
-            ]
-        },
-
-        SuccedingTokenList {
-            token : Token::Identity(Default::default()),
-            succeding_token_list : vec![
-                Token::Assignment
-            ]
-        },
-
-        SuccedingTokenList {
-            token : Token::IntLiteral(Default::default()),
-            succeding_token_list : vec![]
-        },
-
-        SuccedingTokenList {
-            token : Token::IntDeclaration,
-            succeding_token_list : vec![
-                Token::Identity(Default::default()),
-            ]
-        },
-    ]);
-
+pub fn lexer(file_path: &str) -> Vec<(usize, Vec<Token>)> {
+    let mut file_contents = String::default();
     std::fs::File::options()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open("SuccedingTokensLists.json")
+        .read(true)
+        .open(file_path)
         .expect("could not open file")
-        .write_all(succeding_tokens_lists.to_string().as_bytes())
-        .expect("could not write to file");
+        .read_to_string(&mut file_contents)
+        .expect("could not read file");
+
+    let mut tokens: Vec<(usize, Vec<Token>)> = vec![];
+
+    for (line_number, line) in file_contents.split('\n').enumerate() {
+        let mut lex_state = LexerState::Start;
+        let mut line_index = 0;
+        let mut line_token_list: Vec<Token> = vec![];
+        
+        while line_index < line.len() {
+            let c = line.chars().nth(line_index).unwrap();
+
+            let new_token = match lex_state {
+                LexerState::MultiChar | LexerState::Start =>  {
+                    read_alpha_numeric_token(&mut line_index, line)
+                },
+                LexerState::SingleChar => {
+                    let try_read_char_token = read_char_token(&mut line_index, c);
+                    if let Token::Error = try_read_char_token {
+                        read_alpha_numeric_token(&mut line_index, line)
+                    } 
+                    else { try_read_char_token }
+                }
+                LexerState::Error => { Token::Error }
+            };
+            lex_state.step_state(&new_token);
+            line_token_list.push(new_token);
+            println!("{:?}",line_token_list)
+        }
+
+        tokens.push((line_number, line_token_list));        
+    }
+
+    tokens
 }
+
+pub fn read_alpha_numeric_token(index: &mut usize, line: &str) -> Token {
+    let starting_index = *index;
+    let mut ending_index = *index;
+    for c in line[starting_index..line.len() - 1].chars() {
+        if c.is_alphanumeric() {
+            ending_index += 1
+        } else {
+            break;
+        }
+    }
+
+    *index = ending_index;
+
+    println!("{}..{}", starting_index, ending_index);
+
+    match &line[starting_index..ending_index] {
+        "int" => Token::Identity("int".to_string(), IdentityTokenType::Type(Type::Int)),
+        "float" => Token::Identity("float".to_string(), IdentityTokenType::Type(Type::Float)),
+        "bool" => Token::Identity("bool".to_string(), IdentityTokenType::Type(Type::Bool)),
+        "string" => Token::Identity("string".to_string(), IdentityTokenType::Type(Type::String)),
+        "fn" => Token::Identity("fn".to_string(), IdentityTokenType::Function),
+        "true" => Token::BoolLiteral(true),
+        "false" => Token::BoolLiteral(false),
+        
+        _ => { 
+            Token::Identity(
+                line[starting_index..ending_index].to_string(),
+                IdentityTokenType::Variable
+            )
+        },
+    }
+}
+
+pub fn read_char_token(index: &mut usize, c: char) -> Token {
+    *index += 1;
+    match c {
+        ' ' => Token::SpaceSeperator,
+        '=' => Token::Operator(OperatorTokenType::Assignment),
+        '+' => Token::Operator(OperatorTokenType::Addition),
+        '-' => Token::Operator(OperatorTokenType::Subtraction),
+        '*' => Token::Operator(OperatorTokenType::Multiplication),
+        '/' => Token::Operator(OperatorTokenType::Division),
+        '%' => Token::Operator(OperatorTokenType::Modulation),
+        '{' => Token::OpenBlockLimiter,
+        '}' => Token::CloseBlockLimiter,
+        '(' => Token::OpenParameterLimiter,
+        ')' => Token::CloseParameterLimiter,
+        _ => Token::Error,
+    }
+}
+
+pub fn read_string_literal_token(index: &mut usize, line: &str) -> Token {
+    let starting_index = *index;
+    let mut ending_index = *index;
+    for c in line[starting_index..line.len() - 1].chars() {
+        if c == '"' {
+            break;
+        }
+        ending_index += 1
+    }
+    let token_string = line[starting_index..ending_index].to_string();
+    *index += 2 + token_string.len();
+    Token::StringLiteral(token_string)
+}
+
+// pub fn read_int_literal
+
+// pub fn read_int_literal_token
+
+// step 1 build the token list
+
+// step 2 validate the tokens and build an ast
+
+// step 3 THEN use it like an actual language and interpret it
+
