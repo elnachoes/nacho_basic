@@ -1,0 +1,7 @@
+int[] inline = [1,2,3,4]
+
+string[] multiline_string = [
+    "asdf",
+    "qwer",
+    "zxcv",
+]
