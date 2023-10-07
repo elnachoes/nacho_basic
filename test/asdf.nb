@@ -1,9 +1,1 @@
-bool asdf = true
-bool zxcv = false
-int x() {
-    int x = 1 + 2 * 4 
-    if (x > 5) {
-        x()
-    }
-}
-string butts = "asdf"
+x

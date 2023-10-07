@@ -1,69 +1,7 @@
 use std::{io::Read, vec};
-use ordered_float::OrderedFloat;
+use crate::*;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Token {
-    Error,
-    Ignored,
-    Identifier(String),
-    Variable(String),
-    Type(Type),
-    IntLiteral(i32),
-    FloatLiteral(OrderedFloat<f32>),
-    StringLiteral(String),
-    BoolLiteral(bool),
-    OpenBlockLimiter,
-    CloseBlockLimiter,
-    OpenParameterLimiter,
-    CloseParameterLimiter,
-    OpenArrayLimiter,
-    CloseArrayLimiter,    
-    Operator(Operator),
-    Control(Control),
-    ArgumentSeparator,
-    StringLimiter,
-    Struct
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Operator {
-    Assignment,
-    Addition,
-    Subtraction,
-    Multiplication,
-    Division,
-    Modulation,
-    GreaterThan,
-    LessThan,
-    And,
-    Or,
-    Not,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Type {
-    Void,
-    Int,
-    Float,
-    String,
-    Bool,
-    Array(Box<Option<Type>>),
-    Struct(String)
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Control {
-    If,
-    Elif,
-    Else,
-    While,
-    For,
-    Break,
-    Continue,
-    Return,
-}
-
-// This will lexically analyze a nachobasic file.
+// This will lexically analyze a nachobasic file into basic tokens.
 pub fn lexer(file_path: &str) -> Vec<Vec<Token>> {
     let mut file_contents = String::default();
     std::fs::File::options()
@@ -76,26 +14,14 @@ pub fn lexer(file_path: &str) -> Vec<Vec<Token>> {
     let mut tokens: Vec<Vec<Token>> = vec![];
 
     for line in file_contents.split('\n') {
-        let mut line_index = 0;
+        let mut index = 0;
         let mut line_token_list: Vec<Token> = vec![];
 
-        while line_index < line.len() {
-            let c = line.chars().nth(line_index).unwrap();
-            let try_read_char_token = read_char_token(&mut line_index, c);
+        while index < line.len() {
+            let c = line.chars().nth(index).unwrap();
+            let try_read_char_token = try_read_char_token(&mut index, c);
             let new_token = match try_read_char_token {
-                Token::Error => if c.is_alphabetic() {
-                    let token_string = read_alpha_numeric_token_string(&mut line_index, line);
-                    let try_read_keyword = read_keyword_token(token_string);
-                    match try_read_keyword {
-                        Token::Error => Token::Identifier(token_string.to_string()),
-                        _ => try_read_keyword
-                    }
-                } else if c.is_numeric() {
-                    read_int_literal_token(&mut line_index, line)
-                } else {
-                    Token::Error
-                }
-                Token::StringLimiter => read_string_literal_token(&mut line_index, line),
+                Token::Error => try_read_multichar_token(&mut index, line),
                 _ => try_read_char_token
             };
             
@@ -109,15 +35,48 @@ pub fn lexer(file_path: &str) -> Vec<Vec<Token>> {
     tokens
 }
 
-// This will read an individual character token.
-fn read_char_token(index: &mut usize, c: char) -> Token {
+/// This will read a single or multicharacter string slice and return it. 
+/// If this is not starting on a alphabetic character then this will panic.
+fn read_alpha_numeric_token_string<'a>(index : &mut usize, line : &'a str) -> &'a str {
+    let starting_index = *index;
+    let mut ending_index = *index;
+    for c in line[starting_index..line.len()].chars() {
+        if c.is_alphanumeric() || c == '_' { ending_index += 1 } 
+        else { break; }
+    }
+    *index = ending_index;
+    &line[starting_index..ending_index]
+}
+
+/// This will try reading a multicharacter token and return it.
+/// This will try to read a keyword or an identifier first, then it will try a int/float literal then finally it will try a string literal.
+/// If none of the above are found an error token will be returned
+fn try_read_multichar_token(index : &mut usize, line : &str) -> Token {
+    let c = line.chars().nth(*index).unwrap();
+    if c.is_alphabetic() {
+        let token_string = read_alpha_numeric_token_string(index, line);
+        let try_read_keyword = try_read_keyword_token(token_string);
+        match try_read_keyword {
+            Token::Error => Token::Identifier(token_string.to_string()),
+            _ => try_read_keyword
+        }
+    } else if c.is_numeric() || c == '.' {
+        try_read_number_literal_token(index, line)
+    } else if c == '"' {
+        try_read_string_literal_token(index, line)
+    } else {
+        Token::Error
+    }
+}
+
+// This will try reading an individual char token.
+// This will check for operator tokens, an argument separator token, block tokens, and ignored tokens.
+// If none of the above are found this will return an error token.
+fn try_read_char_token(index: &mut usize, c: char) -> Token {
     let token = match c {
         // Ignored Tokens
         ' ' | '\n' | '\r' | '\t' => Token::Ignored,
         
-        // String Literal Limiter Token
-        '"' => Token::StringLimiter,
-
         // Argument Separator Token 
         ',' => Token::ArgumentSeparator,
 
@@ -148,18 +107,10 @@ fn read_char_token(index: &mut usize, c: char) -> Token {
     token
 }
 
-fn read_alpha_numeric_token_string<'a>(index : &mut usize, line : &'a str) -> &'a str {
-    let starting_index = *index;
-    let mut ending_index = *index;
-    for c in line[starting_index..line.len()].chars() {
-        if c.is_alphanumeric() || c == '_' { ending_index += 1 } 
-        else { break; }
-    }
-    *index = ending_index;
-    &line[starting_index..ending_index]
-}
-
-fn read_keyword_token(string : &str) -> Token {
+// This will try reading a keyword token.
+// This will try reading basic type tokens (struct and array types will be parsed in a later step), boolean literal tokens, control keywords, and the struct keyword.
+// If none of the above are found return an error token.
+fn try_read_keyword_token(string : &str) -> Token {
     match string {
         // Type Keywords
         "void" => Token::Type(Type::Void),
@@ -190,7 +141,9 @@ fn read_keyword_token(string : &str) -> Token {
 }
 
 // This will read a string literal token.
-fn read_string_literal_token(index: &mut usize, line: &str) -> Token {
+// This may panic if another double quote is not found to enclose the string literal.
+fn try_read_string_literal_token(index: &mut usize, line: &str) -> Token {
+    *index += 1;
     let starting_index = *index;
     let mut ending_index = *index;
     for c in line[starting_index..line.len() - 1].chars() {
@@ -202,25 +155,35 @@ fn read_string_literal_token(index: &mut usize, line: &str) -> Token {
     Token::StringLiteral(token_string)
 }
 
-// This will read an int literal token.
-fn read_int_literal_token(index: &mut usize, line: &str) -> Token {
+// This will read an int or float literal token depending on if there is a decimal present.
+// If neither a float or a string could be parsed this will return an error token.
+fn try_read_number_literal_token(index: &mut usize, line: &str) -> Token {
     let starting_index = *index;
     let mut ending_index = *index;
 
-    let int_literal_string = if (starting_index..line.len() - 1).len() != 0 {
+    let number_literal_string = if (starting_index..line.len() - 1).len() != 0 {
         for c in line[starting_index..line.len()].chars() {
-            if c.is_numeric() { ending_index += 1 }
+            if c.is_numeric() || c == '.' { ending_index += 1 }
             else { break }
         }
         line[starting_index..ending_index].to_string()
     } else {
         line.chars().nth(ending_index).unwrap().to_string()
     };
+
     *index = ending_index + 1;
 
-    if let Ok(int) = int_literal_string.parse() {
-        Token::IntLiteral(int)
+    if number_literal_string.contains(".") {
+        if let Ok(float) = number_literal_string.parse() {
+            Token::FloatLiteral(OrderedFloat(float))
+        } else {
+            Token::Error
+        }
     } else {
-        Token::Error
+        if let Ok(int) = number_literal_string.parse() {
+            Token::IntLiteral(int)
+        } else {
+            Token::Error
+        }
     }
 }
