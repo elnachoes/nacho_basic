@@ -17,11 +17,11 @@ pub enum Token {
     OpenParameterLimiter,
     CloseParameterLimiter,
     OpenArrayLimiter,
-    CloseArrayLimiter,    
+    CloseArrayLimiter,
     Operator(Operator),
     Control(Control),
     ArgumentSeparator,
-    Struct
+    Struct,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -47,7 +47,7 @@ pub enum Type {
     String,
     Bool,
     Array(Box<Option<Type>>),
-    Struct(String)
+    Struct(String),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

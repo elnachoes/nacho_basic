@@ -9,3 +9,10 @@ test asdf() {
         test_int = 5
     }
 }
+
+struct zxcv {
+    string test_string
+    int test_int
+}
+
+struct 64
