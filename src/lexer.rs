@@ -1,8 +1,10 @@
 use crate::*;
+use models::{Control, Operator, Token, Type};
 use std::{io::Read, vec};
 
-// This will lexically analyze a nachobasic file into basic tokens.
-pub fn lexer(file_path: &str) -> Vec<Vec<Token>> {
+
+/// This will lexically analyze a nachobasic file into basic tokens.
+pub fn lexer(file_path : &str) -> Vec<Token> {
     let mut file_contents = String::default();
     std::fs::File::options()
         .read(true)
@@ -11,31 +13,26 @@ pub fn lexer(file_path: &str) -> Vec<Vec<Token>> {
         .read_to_string(&mut file_contents)
         .expect("could not read file");
 
-    let mut tokens: Vec<Vec<Token>> = vec![];
+    let mut index = 0;
+    let mut tokens: Vec<Token> = vec![];
 
-    for line in file_contents.split('\n') {
-        let mut index = 0;
-        let mut line_token_list: Vec<Token> = vec![];
-
-        while index < line.len() {
-            let c = line.chars().nth(index).unwrap();
-            let try_read_char_token = try_read_char_token(&mut index, c);
-            let new_token = match try_read_char_token {
-                Token::Error => try_read_multichar_token(&mut index, line),
-                _ => try_read_char_token,
-            };
-
-            // println!("{:?}", new_token);
-            if let Token::Error = new_token {
-                return tokens;
-            }
-
-            if new_token != Token::Ignored {
-                line_token_list.push(new_token);
-            }
+    while index < file_contents.len() {
+        let c = file_contents.chars().nth(index).unwrap();
+        let try_read_char_token = try_read_char_token(&mut index, c);
+        let new_token = match try_read_char_token {
+            Token::Error => try_read_multichar_token(&mut index, file_contents.as_str()),
+            _ => try_read_char_token,
+        };
+        
+        if let Token::Error = new_token {
+            return tokens;
         }
-        tokens.push(line_token_list);
+
+        if new_token != Token::Ignored {
+            tokens.push(new_token);
+        }
     }
+
     tokens
 }
 

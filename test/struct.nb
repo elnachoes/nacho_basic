@@ -14,5 +14,3 @@ struct zxcv {
     string test_string
     int test_int
 }
-
-struct 64
