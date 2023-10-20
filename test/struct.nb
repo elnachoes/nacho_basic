@@ -1,16 +1,5 @@
 struct test {
     string test_string
     int test_int
-}
-
-test asdf() {
-    return test {
-        test_string = "hello world"
-        test_int = 5
-    }
-}
-
-struct zxcv {
-    string test_string
-    int test_int
+    other_struct x
 }

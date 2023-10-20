@@ -27,4 +27,15 @@ while  {
 for i in range(0..=10) {
 }
 
-//maybe a composite type that can get stored on the heap or the stack? undecided on if I want to go that far.
+// array
+int[] inline = [1,2,3,4]
+
+int[int[]] multidimensional = [[1,2]]
+
+// structs
+struct test {
+    string test_string
+    int test_int
+    other_struct x
+    int[] inline = [1,2,3,4]
+}

@@ -1,4 +1,3 @@
-use core::panic;
 use std::collections::HashMap;
 use ordered_float::OrderedFloat;
 
@@ -17,13 +16,6 @@ pub struct Struct {
     pub identifier : String,
     pub map : HashMap<String, Variable>
 }
-// impl Struct {
-//     pub fn load_struct
-
-//     // pub fn allocate(identity : &String, fields : Vec<(VariableType, Iden)) -> Self {
-        
-//     // }
-// }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Array {
