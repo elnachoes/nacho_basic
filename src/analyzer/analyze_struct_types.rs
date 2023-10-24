@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 use crate::models::*;
 
+pub fn analyze_struct_types(tokens: &mut Vec<Token>) -> Result<(), String> {
+    let mut type_map: HashMap<String, Token> = HashMap::new();
+    unimplemented!("todo : analyze_struct_types");
+    
+    Ok(())
+}
 
 pub fn read_struct_declaration(tokens: &Vec<Token>, index: usize) -> Result<Struct, String> {
     #[derive(PartialEq, Eq, Debug)]
