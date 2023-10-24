@@ -5,23 +5,23 @@ fn print_section_line(section : &str) {
 }
 
 fn main() {
-    let file = "test/struct.nb";
+    // let file = "test/struct.nb";
     
-    print_section_line("lexer");
+    // print_section_line("lexer");
 
-    // get token list and print it
-    let token_list = lexer(file);
-    token_list
-        .iter()
-        .for_each(|token_list| println!("{:?}", token_list));
+    // // get token list and print it
+    // let token_list = lexer(file);
+    // token_list
+    //     .iter()
+    //     .for_each(|token_list| println!("{:?}", token_list));
 
-    print_section_line("analyzer");
+    // print_section_line("analyzer");
 
-    let types = analyzer::read_struct_declaration(&token_list, 1);
+    // let types = analyzer::read_struct_declaration(&token_list, 1);
 
-    println!("{:?}", types);
+    // println!("{:?}", types);
 
-    print_section_line("end")
+    // print_section_line("end")
 
     // println!("\n\n\n\n");
 

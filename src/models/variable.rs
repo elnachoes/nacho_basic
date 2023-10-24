@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use ordered_float::OrderedFloat;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Variable {
@@ -29,19 +30,28 @@ pub enum Type {
     Float,
     Bool,
     String,
-    Array(Array),
-    Struct(Struct)
+    Array(ArrayType),
+    Struct(String)
 }
-impl Type {
-    pub fn allocate_variable(&self) -> Option<Variable> {
-        match self {
-            Self::Void => None,
-            Self::Int => Some(Variable::Int(0)),
-            Self::Float => Some(Variable::Float(OrderedFloat(0.0))),
-            Self::Bool => Some(Variable::Bool(false)),
-            Self::String => Some(Variable::String("".to_string())),
-            Self::Array(array) => Some(Variable::Array( array.clone())),
-            Self::Struct(strct) => Some(Variable::Struct(strct.clone())),
-        }        
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ArrayType {
+    Int,
+    Float,
+    Bool,
+    String,
+    Struct(String)
+}
+impl fmt::Display for ArrayType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let nb_type_string = match self {
+            Self::Int => "Int",
+            Self::Float => "Float",
+            Self::Bool => "Bool",
+            Self::String => "String",
+            Self::Struct(string) => string.as_str()
+        };
+
+        write!(f, "Type : {}", nb_type_string)
     }
 }
