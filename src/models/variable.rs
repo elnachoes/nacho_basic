@@ -5,8 +5,8 @@ use ordered_float::OrderedFloat;
 pub enum Variable {
     Int(i32),
     Float(OrderedFloat<f32>),
-    String(String),
     Bool(bool),
+    String(String),
     Array(Array),
     Struct(Struct)
 }
@@ -19,7 +19,7 @@ pub struct Struct {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Array {
-    pub list : Vec<Type>
+    pub list : Vec<Variable>
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -27,8 +27,8 @@ pub enum Type {
     Void,
     Int,
     Float,
-    String,
     Bool,
+    String,
     Array(Array),
     Struct(Struct)
 }
