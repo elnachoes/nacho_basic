@@ -11,7 +11,7 @@ pub fn read_array_type(tokens : &mut Vec<Token>, index : usize) -> Result<Type, 
     let nb_type_token = tokens.iter().nth(index);
     
     // get base type out of the token
-    let array_type = if let Some(ref token) = nb_type_token {
+    let nb_type = if let Some(ref token) = nb_type_token {
         if let Token::Type(ref nb_type) = token {
             nb_type
         } else {
@@ -22,22 +22,29 @@ pub fn read_array_type(tokens : &mut Vec<Token>, index : usize) -> Result<Type, 
     };
 
     // check if a void type was used like void[] stupid_void_array
-    if let Type::Void = array_type {
+    if let Type::Void = nb_type {
         return Err("error : read_array_type : you cannot have a void array type".to_string())
     }
 
-    // ---- TODO ---- : finish this
+    let mut read_state = ReadState::OpenBracket;
 
-
-    // read the brackets and make sure they are present after the token 
-    // 
-    for token in tokens.iter().skip(index) {
+    for token in tokens.iter().skip(index + 1) {
         match *token {
-            Token::OpenArrayLimiter => {},
-            Token::CloseArrayLimiter => break,
-            _ => return Err("error expected bracket".to_string())
+            Token::OpenArrayLimiter => read_state = ReadState::CloseBracket,
+            Token::CloseArrayLimiter => {
+                if let ReadState::CloseBracket = read_state {
+                    break
+                } else {
+                    return Err("error : expected close bracket".to_string())
+                }
+            },
+            _ => return Err("error : expected brackets".to_string())
         }
     }
 
-    Ok(Type::Void)
+    if let Some(nb_array_type) = nb_type.to_array_type() {
+        Ok(Type::Array(nb_array_type))
+    } else {
+        Err("error : type cannot be stored in an array".to_string())
+    }
 }

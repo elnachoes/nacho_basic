@@ -33,6 +33,18 @@ pub enum Type {
     Array(ArrayType),
     Struct(String)
 }
+impl Type {
+    pub fn to_array_type(&self) -> Option<ArrayType> {
+        match self {
+            Self::Int => Some(ArrayType::Int),
+            Self::Float => Some(ArrayType::Float),
+            Self::Bool => Some(ArrayType::Bool),
+            Self::String => Some(ArrayType::String),
+            Self::Struct(string) => Some(ArrayType::Struct(string.clone())),
+            _ => None
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ArrayType {
@@ -41,6 +53,17 @@ pub enum ArrayType {
     Bool,
     String,
     Struct(String)
+}
+impl ArrayType {
+    pub fn to_type(&self) -> Type {
+        match self {
+            Self::Int => Type::Int,
+            Self::Float => Type::Float,
+            Self::Bool => Type::Bool,
+            Self::String => Type::String,
+            Self::Struct(string) => Type::Struct(string.clone())
+        }
+    }
 }
 impl fmt::Display for ArrayType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
