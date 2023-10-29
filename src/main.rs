@@ -1,28 +1,21 @@
-use nacho_basic::{*, models::{Token, Type}};
+use nacho_basic::{*, models::{Token, Type, Struct}};
 
 fn print_section_line(section : &str) {
     println!("--------------------------------------{}--------------------------------------", section);
 }
 
 fn main() {
+    // println!("{:?}", analyze_array_types::read_array_type(&mut token_list, 0))
 
-    let mut token_list = vec![
-        Token::Type(Type::Int), 
-        Token::OpenArrayLimiter,
-        Token::CloseArrayLimiter,
-    ];
-
-    println!("{:?}", analyze_array_types::read_array_type(&mut token_list, 0))
-
-    // let file = "test/struct.nb";
+    let file = "test/struct.nb";
     
-    // print_section_line("lexer");
+    print_section_line("lexer");
 
-    // // get token list and print it
-    // let token_list = lexer(file);
-    // token_list
-    //     .iter()
-    //     .for_each(|token_list| println!("{:?}", token_list));
+    // get token list and print it
+    let token_list = lexer(file);
+    token_list
+        .iter()
+        .for_each(|token_list| println!("{:?}", token_list));
 
     // print_section_line("analyzer");
 

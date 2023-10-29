@@ -5,6 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "preLaunchTask": "rust: cargo build",
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",

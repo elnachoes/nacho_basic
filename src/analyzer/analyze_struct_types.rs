@@ -14,8 +14,15 @@ pub fn read_struct_declaration(tokens: &Vec<Token>, index: usize) -> Result<Stru
         StructIdentifier,
         Field,
         Type,
+        ArrayBrackets(ArrayBrackets)
     }
-
+    
+    #[derive(PartialEq, Eq, Debug)]
+    enum ArrayBrackets {
+        OpenBracket,
+        CloseBracket
+    }
+    
     let mut nb_struct = Struct {
         identifier: String::default(),
         map: HashMap::new(),
@@ -56,14 +63,25 @@ pub fn read_struct_declaration(tokens: &Vec<Token>, index: usize) -> Result<Stru
                         // current_nb_type = Type::Struct(Struct { identifier: identifier.clone(), map: HashMap::new() });
                         read_state = IdReadState::Field
                     }
+                    IdReadState::ArrayBrackets(_) => return Err("error : expected array bracket".to_string())
                 }
             },
             Token::OpenBlockLimiter => read_state = IdReadState::Type,
             Token::CloseBlockLimiter => break,
 
             Token::OpenArrayLimiter => {
+                if let IdReadState::ArrayBrackets(_) = read_state {
+                    return Err("error : unexpected extra array brackets".to_string())                    
+                } else {
+                    // todo handle reading array type
+                    read_state = IdReadState::ArrayBrackets(ArrayBrackets::CloseBracket)
+                }
+            }
+            
+            Token::CloseArrayLimiter => {
                 // todo handle reading array type
             }
+            
             _ => {
                 // todo: unxpected token error here
                 // should base it off of what the current state
