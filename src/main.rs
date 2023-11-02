@@ -23,9 +23,4 @@ fn main() {
     let nb_struct = analyzer::read_struct_declaration_test(&tokens, 1).expect("couldn't read struct");
     // println!("{nb_struct:?}");
     // println!("{:?}", nb_struct.map)
-
-
-    // let mut test = HashMap::<&str, &str>::new();
-    // test.insert("peniskey", "penisvalue");
-    // println!("{:?}", test)
 }
