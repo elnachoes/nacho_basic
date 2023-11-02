@@ -140,7 +140,7 @@ fn try_read_keyword_token(string: &str) -> Token {
         "return" => Token::Control(Control::Return),
 
         // Struct Keyword
-        "struct" => Token::Struct,
+        "struct" => Token::StructDeclaration,
 
         _ => Token::Error,
     }

@@ -12,7 +12,7 @@
             "program": "${workspaceFolder}/target/debug/nacho_basic",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

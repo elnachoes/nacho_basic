@@ -1,57 +1,31 @@
-use nacho_basic::{*, models::{Token, Type, Struct}};
+use std::collections::HashMap;
+
+use nacho_basic::{*, models::{Token, Type, Struct, token}};
 
 fn print_section_line(section : &str) {
     println!("--------------------------------------{}--------------------------------------", section);
 }
 
 fn main() {
-    // println!("{:?}", analyze_array_types::read_array_type(&mut token_list, 0))
-
-    let file = "test/struct.nb";
-    
-    print_section_line("lexer");
-
-    // get token list and print it
-    let token_list = lexer(file);
-    token_list
-        .iter()
-        .for_each(|token_list| println!("{:?}", token_list));
-
-    // print_section_line("analyzer");
-
-    // let types = analyzer::read_struct_declaration(&token_list, 1);
-
-    // println!("{:?}", types);
-
-    // print_section_line("end")
-
-    // println!("\n\n\n\n");
-
-    // let token_list = lexer_no_line(file);
-
-    // token_list
-    //     .iter()
-    //     .for_each(|token_list| println!("{:?}", token_list));
-
-    // println!("")
+    // let mut tokens = vec![
+    //     Token::Type(Type::Int),
+    //     Token::OpenArrayLimiter,
+    //     Token::CloseArrayLimiter,
+    // ];
+    // println!("{:?}", tokens);
+    // match read_array_type_test(tokens, 0) {
+    //     Ok(tokens) => println!("{:?}", tokens),
+    //     Err(err) => panic!("{}", err)
+    // }
 
 
-    // println!("---- AFTER ANALYZING TYPES ----");
+    let tokens = lexer("test/struct.nb");
+    let nb_struct = analyzer::read_struct_declaration_test(&tokens, 1).expect("couldn't read struct");
+    // println!("{nb_struct:?}");
+    // println!("{:?}", nb_struct.map)
 
-    // analyze(&mut token_list);
 
-    // token_list
-    //     .iter()
-    //     .for_each(|token_list| println!("{:?}", token_list));
-
-    // let types = analyze_struct_type_identifiers(&token_list);
-    // println!("{:?}", types)
-
-    // types.iter().for_each(|t| println!("{}", t))
-
-    // let x = "asdf";
-    // let y = "asdf";
-    // if x == y {print!("asdf")}
-
-    // let x =
+    // let mut test = HashMap::<&str, &str>::new();
+    // test.insert("peniskey", "penisvalue");
+    // println!("{:?}", test)
 }

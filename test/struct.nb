@@ -1,4 +1,5 @@
 struct test {
+    int[] test_array
     string test_string
     int test_int
     other_struct x
