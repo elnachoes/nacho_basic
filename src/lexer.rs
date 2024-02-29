@@ -1,200 +1,95 @@
-use crate::*;
-use models::{Control, Operator, Token, Type};
 use std::{io::Read, vec};
+use itertools::Itertools;
+use ordered_float::OrderedFloat;
+use crate::{models::token::*, utilities::dyn_range};
 
-
-/// This will lexically analyze a nachobasic file into basic tokens.
-pub fn lexer(file_path : &str) -> Vec<Token> {
-    let mut file_contents = String::default();
+pub fn lexer(file_path : &str) -> Result<Vec<Token>, String> {
+    // open the file and read it into a string
+    let mut input = String::default();
     std::fs::File::options()
         .read(true)
         .open(file_path)
-        .expect("could not open file")
-        .read_to_string(&mut file_contents)
-        .expect("could not read file");
+        .or(Err("could not open file".to_string()))?
+        .read_to_string(&mut input)
+        .or(Err("could not read file".to_string()))?;
 
     let mut index = 0;
     let mut tokens: Vec<Token> = vec![];
-
-    while index < file_contents.len() {
-        let c = file_contents.chars().nth(index).unwrap();
-        let try_read_char_token = try_read_char_token(&mut index, c);
-        let new_token = match try_read_char_token {
-            Token::Error => try_read_multichar_token(&mut index, file_contents.as_str()),
-            _ => try_read_char_token,
-        };
+    while index < input.len() {
+        let current_index_character = input.chars().nth(index).unwrap();
         
-        if let Token::Error = new_token {
-            return tokens;
-        }
-
-        if new_token != Token::Ignored {
-            tokens.push(new_token);
-        }
-    }
-
-    tokens
-}
-
-/// This will read a single or multicharacter string slice and return it.
-/// If this is not starting on a alphabetic character then this will panic.
-fn read_alpha_numeric_token_string<'a>(index: &mut usize, line: &'a str) -> &'a str {
-    let starting_index = *index;
-    let mut ending_index = *index;
-    for c in line[starting_index..line.len()].chars() {
-        if c.is_alphanumeric() || c == '_' {
-            ending_index += 1
-        } else {
-            break;
-        }
-    }
-    *index = ending_index;
-    &line[starting_index..ending_index]
-}
-
-/// This will try reading a multicharacter token and return it.
-/// This will try to read a keyword or an identifier first, then it will try a int/float literal then finally it will try a string literal.
-/// If none of the above are found an error token will be returned
-fn try_read_multichar_token(index: &mut usize, line: &str) -> Token {
-    let c = line.chars().nth(*index).unwrap();
-    if c.is_alphabetic() {
-        let token_string = read_alpha_numeric_token_string(index, line);
-        let try_read_keyword = try_read_keyword_token(token_string);
-        match try_read_keyword {
-            Token::Error => Token::Identifier(token_string.to_string()),
-            _ => try_read_keyword,
-        }
-    } else if c.is_numeric() || c == '.' {
-        try_read_number_literal_token(index, line)
-    } else if c == '"' {
-        try_read_string_literal_token(index, line)
-    } else {
-        Token::Error
-    }
-}
-
-// This will try reading an individual char token.
-// This will check for operator tokens, an argument separator token, block tokens, and ignored tokens.
-// If none of the above are found this will return an error token.
-fn try_read_char_token(index: &mut usize, c: char) -> Token {
-    let token = match c {
-        // Ignored Tokens
-        ' ' | '\n' | '\r' | '\t' => Token::Ignored,
-
-        // Argument Separator Token
-        ',' => Token::ArgumentSeparator,
-
-        // Operator Tokens
-        '=' => Token::Operator(Operator::Assignment),
-        '+' => Token::Operator(Operator::Addition),
-        '-' => Token::Operator(Operator::Subtraction),
-        '*' => Token::Operator(Operator::Multiplication),
-        '/' => Token::Operator(Operator::Division),
-        '%' => Token::Operator(Operator::Modulation),
-        '!' => Token::Operator(Operator::Not),
-        '&' => Token::Operator(Operator::And),
-        '|' => Token::Operator(Operator::Or),
-        '<' => Token::Operator(Operator::LessThan),
-        '>' => Token::Operator(Operator::GreaterThan),
-
-        // Block Tokens
-        '{' => Token::OpenBlockLimiter,
-        '}' => Token::CloseBlockLimiter,
-        '(' => Token::OpenParameterLimiter,
-        ')' => Token::CloseParameterLimiter,
-        '[' => Token::OpenArrayLimiter,
-        ']' => Token::CloseArrayLimiter,
-
-        _ => Token::Error,
-    };
-    if token != Token::Error {
-        *index += 1;
-    }
-    token
-}
-
-// This will try reading a keyword token.
-// This will try reading basic type tokens (struct and array types will be parsed in a later step), boolean literal tokens, control keywords, and the struct keyword.
-// If none of the above are found return an error token.
-fn try_read_keyword_token(string: &str) -> Token {
-    match string {
-        // Type Keywords
-        "void" => Token::Type(Type::Void),
-        "int" => Token::Type(Type::Int),
-        "float" => Token::Type(Type::Float),
-        "bool" => Token::Type(Type::Bool),
-        "string" => Token::Type(Type::String),
-
-        // Bool Literal Keywords
-        "true" => Token::BoolLiteral(true),
-        "false" => Token::BoolLiteral(false),
-
-        // Control Keywords
-        "if" => Token::Control(Control::If),
-        "elif" => Token::Control(Control::Elif),
-        "else" => Token::Control(Control::Else),
-        "while" => Token::Control(Control::While),
-        "for" => Token::Control(Control::For),
-        "break" => Token::Control(Control::Break),
-        "continue" => Token::Control(Control::Continue),
-        "return" => Token::Control(Control::Return),
-
-        // Struct Keyword
-        "struct" => Token::Struct,
-
-        _ => Token::Error,
-    }
-}
-
-// This will read a string literal token.
-// This may panic if another double quote is not found to enclose the string literal.
-fn try_read_string_literal_token(index: &mut usize, line: &str) -> Token {
-    *index += 1;
-    let starting_index = *index;
-    let mut ending_index = *index;
-    for c in line[starting_index..line.len() - 1].chars() {
-        if c == '"' {
-            break;
-        }
-        ending_index += 1
-    }
-    let token_string = line[starting_index..ending_index].to_string();
-    *index += 2 + token_string.len();
-    Token::StringLiteral(token_string)
-}
-
-// This will read an int or float literal token depending on if there is a decimal present.
-// If neither a float or a string could be parsed this will return an error token.
-fn try_read_number_literal_token(index: &mut usize, line: &str) -> Token {
-    let starting_index = *index;
-    let mut ending_index = *index;
-
-    let number_literal_string = if (starting_index..line.len() - 1).len() != 0 {
-        for c in line[starting_index..line.len()].chars() {
-            if c.is_numeric() || c == '.' {
-                ending_index += 1
-            } else {
-                break;
+        // try reading a char token 
+        if let Ok(character_token) = Token::try_from(current_index_character) {
+            if !character_token.is_ignored() {
+                tokens.push(character_token)
             }
+            index += 1;
+            continue 
         }
-        line[starting_index..ending_index].to_string()
-    } else {
-        line.chars().nth(ending_index).unwrap().to_string()
-    };
 
-    *index = ending_index + 1;
+        // try reading a keyword, boolean literal or identity token
+        if current_index_character.is_alphabetic() {
+            let str_to_parse = input
+                .char_indices()
+                .skip(index)
+                .find_or_last(|(_index, c)| !c.is_alphabetic() && *c != '_')
+                .map(|(ending_index, _c)| ending_index)
+                .or(Some(index))
+                .map(|ending_index| &input[dyn_range(index, ending_index)])
+                .unwrap();
 
-    if number_literal_string.contains(".") {
-        if let Ok(float) = number_literal_string.parse() {
-            Token::FloatLiteral(OrderedFloat(float))
-        } else {
-            Token::Error
+            // try reading a keyword
+            if let Ok(keyword_token) = Token::try_from(str_to_parse) {
+                tokens.push(keyword_token);
+                index += str_to_parse.len();
+                continue
+            }
+            
+            // read an identity
+            tokens.push(Token::Identity(str_to_parse.to_string()));
+            index += str_to_parse.len();
+            continue
         }
-    } else {
-        if let Ok(int) = number_literal_string.parse() {
-            Token::IntLiteral(int)
-        } else {
-            Token::Error
+
+        // try reading a string literal
+        if current_index_character == '"' {
+            let ending_quote_index = input
+                .char_indices()
+                .skip(index + 1)
+                .find(|(_index, c)| *c == '"')
+                .ok_or("missing ending string litteral quote".to_string())?
+                .0;
+            
+            tokens.push(Token::StringLiteral(input[index + 1..ending_quote_index].to_string()));
+            index = ending_quote_index + 1;
+            continue
+        }
+
+        // try reading a number type literal
+        if current_index_character.is_numeric() || current_index_character == '.' {
+            let str_to_parse = input
+                .char_indices()
+                .skip(index)
+                .find_or_last(|(_index, c)| !c.is_numeric() && *c != '.')
+                .map(|(ending_index, _c)| ending_index)
+                .or(Some(index))
+                .map(|ending_index| &input[dyn_range(index, ending_index)])
+                .unwrap();
+
+            // if there is a decimal point in the number it will be read as a float literal otherwise read an int literal
+            let new_number_token = if str_to_parse.contains('.') {
+                let float_literal : f64 = str_to_parse.parse().or(Err("could not parse float literal".to_string()))?;
+                Token::FloatLiteral(OrderedFloat::from(float_literal))
+            } else {
+                let int_literal = str_to_parse.parse().or(Err("could not parse int literal".to_string()))?;
+                Token::IntLiteral(int_literal)
+            };
+                
+            index += str_to_parse.len();
+            tokens.push(new_number_token);
+            continue
         }
     }
+
+    Ok(tokens)
 }

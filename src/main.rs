@@ -1,27 +1,29 @@
-use nacho_basic::{*};
-
 fn print_section_line(section : &str) {
     println!("--------------------------------------{}--------------------------------------", section);
 }
 
 fn main() {
-    let file = "test/struct.nb";
+    let file = "test/function.nb";
     
     print_section_line("lexer");
 
     // get token list and print it
-    let token_list = lexer(file);
-    token_list
-        .iter()
-        .for_each(|token_list| println!("{:?}", token_list));
+    println!("{:?}", nacho_basic::lexer::lexer(file))
+    // token_list
+    //     .iter()
+    //     .for_each(|token_list| println!("{:?}", token_list));
+    
+    // assert_eq!(0.69f32, ".69".parse().unwrap())
 
-    print_section_line("analyzer");
 
-    let types = analyzer::read_struct_declaration(&token_list, 1);
 
-    println!("{:?}", types);
+    // print_section_line("analyzer");
 
-    print_section_line("end")
+    // let types = analyzer::read_struct_declaration(&token_list, 1);
+
+    // println!("{:?}", types);
+
+    // print_section_line("end")
 
     // println!("\n\n\n\n");
 
