@@ -1,16 +1,7 @@
-struct Interpreter<'a> {
-    pub stack_memory : Vec<&'a dyn ValueType>,
-    pub heep_memory : Vec<u8>,
-    pub program_memory : Vec<String>,
-    pub program_counter : u32,
-}
+use models::memory::Type;
 
-impl Interpreter<'_> {
-    pub fn run_program(&mut self) {
-        // main process loop here.
-        // read line -> execute line -> inc pc
-        loop {
+// this is what will evaluate an expression and do things to it
+// for now use this function to test out evaluating expressions on like a fake stack frame
+pub fn executor() {
 
-        }
-    }
 }
