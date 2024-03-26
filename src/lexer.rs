@@ -1,8 +1,59 @@
+use crate::models::token::Token;
 use std::{io::Read, vec};
-use itertools::Itertools;
-use ordered_float::OrderedFloat;
-use crate::{models::token::*, utilities::dyn_range};
+use nom::{
+    bytes::complete::is_not, 
+    character::complete::{alpha1, char, one_of}, 
+    combinator::recognize, 
+    error::Error, 
+    multi::{many0, many1}, 
+    sequence::{delimited, terminated, } 
+};
 
+/// this is a helper function to recognize a list of characters inside of an input in a sequence.
+fn recognize_sequence_of<'a>(input : &'a str, char_list : &'a str) -> Result<(&'a str, &'a str), String> {
+    recognize(many1(terminated(one_of(char_list), many0(char::<&'a str, Error<&'a str>>('_')))))(input).map_err(|error| error.to_string())
+}
+
+/// trys to parse a string literal.
+fn string_literal_token(input: &str) -> Result<(Token, &str), String> {
+    delimited(char::<&str, Error<&str>>('"'), is_not("\""), char('"'))(input)
+        .map_err(|_| "could not parse string literal".to_string())
+        .map(|(remaining, value)| (Token::StringLiteral(value.to_string()), remaining))
+}
+
+/// trys to parse a number token. this will parse a float literal if there is a decimal point present, if not it will return an int literal.
+fn number_literal_token(input: &str) -> Result<(Token, &str), String> {
+    recognize_sequence_of(input, "0123456789.")
+        .and_then(|(remaining, value)| 
+            if value.contains(".") {
+                Ok((Token::FloatLiteral(value.parse().or(Err("could not parse float literal".to_string()))?), remaining))
+            } else {
+                Ok((Token::IntLiteral(value.parse().or(Err("could not parse int literal".to_string()))?), remaining))
+            }
+        )
+}
+
+/// trys to parse a keyword token, then an identity token
+fn keyword_or_identity_token(input: &str) -> Result<(Token, &str), String> {
+    keyword_token(input).or(
+        recognize_sequence_of(input, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_")
+            .map(|(remaining, value)| (Token::Identity(value.to_string()), remaining))
+    )
+} 
+
+/// trys to parse a keyword token
+fn keyword_token(input: &str) -> Result<(Token, &str), ()> {
+    alpha1::<&str, Error<&str>>(input)
+        .map_err(|_| ())
+        .and_then(|(remaining, value)| Ok((Token::try_from(value)?, remaining)))
+}
+
+/// trys to parses a single char token
+fn char_token(input: &str) -> Result<(Token, &str), ()> {
+    Ok((input.chars().next().ok_or(())?.try_into()?, &input[1..]))
+}
+
+/// this will return a vec of char/keyword/literal/identity tokens from a nacho basic file at the given path
 pub fn lexer(file_path : &str) -> Result<Vec<Token>, String> {
     // open the file and read it into a string
     let mut input = String::default();
@@ -13,83 +64,35 @@ pub fn lexer(file_path : &str) -> Result<Vec<Token>, String> {
         .read_to_string(&mut input)
         .or(Err("could not read file".to_string()))?;
 
-    let mut index = 0;
-    let mut tokens: Vec<Token> = vec![];
-    while index < input.len() {
-        let current_index_character = input.chars().nth(index).unwrap();
-        
-        // try reading a char token 
-        if let Ok(character_token) = Token::try_from(current_index_character) {
-            if !character_token.is_ignored() {
-                tokens.push(character_token)
-            }
-            index += 1;
-            continue 
-        }
-
-        // try reading a keyword, boolean literal or identity token
-        if current_index_character.is_alphabetic() {
-            let str_to_parse = input
-                .char_indices()
-                .skip(index)
-                .find_or_last(|(_index, c)| !c.is_alphabetic() && *c != '_')
-                .map(|(ending_index, _c)| ending_index)
-                .or(Some(index))
-                .map(|ending_index| &input[dyn_range(index, ending_index)])
-                .unwrap();
-
-            // try reading a keyword
-            if let Ok(keyword_token) = Token::try_from(str_to_parse) {
-                tokens.push(keyword_token);
-                index += str_to_parse.len();
-                continue
-            }
-            
-            // read an identity
-            tokens.push(Token::Identity(str_to_parse.to_string()));
-            index += str_to_parse.len();
+    let mut remaining = input.as_str();
+    let mut output = vec![];
+    while remaining.len() > 0 {
+        // try reading a single character token first
+        if let Ok((token, new_remaining)) = char_token(remaining) {
+            if !token.is_ignored() { output.push(token) }
+            remaining = new_remaining;
             continue
         }
 
-        // try reading a string literal
-        if current_index_character == '"' {
-            let ending_quote_index = input
-                .char_indices()
-                .skip(index + 1)
-                .find(|(_index, c)| *c == '"')
-                .ok_or("missing ending string litteral quote".to_string())?
-                .0;
-            
-            tokens.push(Token::StringLiteral(input[index + 1..ending_quote_index].to_string()));
-            index = ending_quote_index + 1;
-            continue
-        }
+        // if reading a character token was unsuccessful parse a multicharacter token based on the next char.
+        let next_char = remaining.chars().next().unwrap();
 
-        // try reading a number type literal
-        if current_index_character.is_numeric() || current_index_character == '.' {
-            let str_to_parse = input
-                .char_indices()
-                .skip(index)
-                .find_or_last(|(_index, c)| !c.is_numeric() && *c != '.')
-                .map(|(ending_index, _c)| ending_index)
-                .or(Some(index))
-                .map(|ending_index| &input[dyn_range(index, ending_index)])
-                .unwrap();
+        // read a keyword or idenity token if the first character is a letter or underscore
+        let (token, new_remaining) = if next_char.is_alphabetic() || next_char == '_' {
+            keyword_or_identity_token(remaining)?
+        // read a number literal if the first character is a number or decimal dot
+        } else if next_char.is_numeric() || next_char == '.' {
+            number_literal_token(remaining)?
+        // read a string literal if the first character is a quote
+        } else if next_char == '"' {
+            string_literal_token(remaining)?
+        } else {
+            return Err(format!("unexpected char : {next_char}"))
+        };
 
-            // if there is a decimal point in the number it will be read as a float literal otherwise read an int literal
-            let new_number_token = if str_to_parse.contains('.') {
-                let float_literal : f64 = str_to_parse.parse().or(Err("could not parse float literal".to_string()))?;
-                Token::FloatLiteral(OrderedFloat::from(float_literal))
-            } else {
-                let int_literal = str_to_parse.parse().or(Err("could not parse int literal".to_string()))?;
-                Token::IntLiteral(int_literal)
-            };
-                
-            index += str_to_parse.len();
-            tokens.push(new_number_token);
-            continue
-        }
+        if !token.is_ignored() { output.push(token) }
+        remaining = new_remaining
     }
 
-    Ok(tokens)
+    Ok(output)
 }
